@@ -1,0 +1,1184 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VMware Cloud Foundation 9.1.1 元件導覽</title>
+<link rel="icon" href="data:,">
+<meta name="description" content="以三維模型互動導覽 VMware Cloud Foundation 9.1.1 各元件：ESX、vCenter、vSAN、NSX、Supervisor／VKS、SDDC Manager、VCF Management Services、VCF Operations、VCF Automation 與 VCF Installer。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sans:"Noto Sans TC","Noto Sans CJK TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --mono:"IBM Plex Mono","Noto Sans TC",ui-monospace,monospace;
+  --bg:#F3F3F1; --ink:#161616; --ink2:#55575A; --ink3:#8E9093;
+  --rule:rgba(22,22,22,.16); --btn:rgba(255,255,255,.72); --card:rgba(255,255,255,.66);
+  --ok:#2E9A8C; --bad:#C8553D; --focus:#4A7DC0;
+  /* 縮放橫軸：模型放大時文字欄變窄（幅度上限約 20%） */
+  --z:1; --pw:min(calc((60vw - 56px) * (2 - var(--z))), calc(100vw - 336px)); --mh:calc((100svh - 116px) * .4 * var(--z));
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#141516; --ink:#ECECE8; --ink2:#A9ABAD; --ink3:#76787B;
+    --rule:rgba(236,236,232,.16); --btn:rgba(32,33,35,.72); --card:rgba(32,33,35,.66);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141516; --ink:#ECECE8; --ink2:#A9ABAD; --ink3:#76787B;
+  --rule:rgba(236,236,232,.16); --btn:rgba(32,33,35,.72); --card:rgba(32,33,35,.66);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-weight:400;-webkit-font-smoothing:antialiased;transition:background .4s,color .4s}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:inherit}
+.mono{font-family:var(--mono)}
+
+#stage{position:fixed;inset:0;z-index:0}
+#stage canvas{display:block;touch-action:none}
+.labels{position:absolute;inset:0;pointer-events:none}
+.veil{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(90deg,var(--bg) 0,var(--bg) calc(var(--pw) - 60px),transparent calc(var(--pw) + 180px));opacity:.92;transition:background .4s}
+
+/* 3D labels */
+.lbl{pointer-events:none;white-space:nowrap;transition:opacity .2s}
+.lbl .in{display:flex;align-items:baseline;gap:6px;transform:translateX(50%);font-size:13px;color:var(--ink);text-shadow:0 0 3px var(--bg),0 0 6px var(--bg),0 0 10px var(--bg)}
+.lbl.left .in{transform:translateX(-50%);flex-direction:row-reverse}
+.lbl.center .in{transform:none}
+.lbl b{font-family:var(--mono);font-weight:500;font-size:12px;color:var(--c);letter-spacing:.02em}
+.lbl i{font-style:normal;font-size:11.5px;color:var(--ink3)}
+.lbl.title .in{transform:none;font-size:12px;letter-spacing:.12em;color:var(--ink2);padding:3px 8px;border:1px solid var(--rule);background:var(--btn);border-radius:99px}
+.lbl.tag .in{transform:none;font-family:var(--mono);font-size:11px;padding:3px 8px;border-radius:4px;background:var(--ink);color:var(--bg)}
+/* 3D 區只佔 4 成，標籤只留產品名，中文說明看面板 */
+.lbl i{display:none}
+.lbl .in{font-size:12px}
+/* 對照章只留兩個標題與 vSphere Foundation 方塊的標籤 */
+body[data-mode="cmp"] .lbl.main{display:none}
+/* 流程章只留目前步驟的標記，元件名看面板 */
+body[data-mode="flow"] .lbl.main{display:none}
+
+/* header */
+#top{position:fixed;left:56px;right:40px;top:28px;height:44px;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{display:flex;align-items:center;gap:14px;font-size:14px;letter-spacing:.06em;color:var(--ink2)}
+.brand b{color:var(--ink);font-weight:500}
+.brand .div{width:1px;height:22px;background:var(--rule)}
+.ctl{display:flex;gap:8px}
+.ctl button,#tools button,#bar button,.btn{border:1px solid var(--rule);background:var(--btn);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:99px;padding:7px 14px;font-size:13px;transition:background .2s,border-color .2s}
+.ctl button:hover,#tools button:hover,#bar button:hover,.btn:hover{border-color:var(--ink3)}
+.ctl button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+#tools{position:fixed;right:40px;top:84px;z-index:3;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink3)}
+.zl{display:flex;align-items:center;gap:6px;border:1px solid var(--rule);background:var(--btn);border-radius:99px;padding:4px 10px;color:var(--ink2)}
+.zl input{width:90px;accent-color:var(--ink)}
+
+/* panel */
+#panel{position:fixed;left:56px;top:100px;bottom:92px;width:var(--pw);z-index:2;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;overflow-anchor:none;scrollbar-width:none;padding-right:8px}
+#panel::-webkit-scrollbar{display:none}
+/* 所有章節連成一長頁，捲動決定目前章節；尾端留白讓最後一章也能捲到判斷線 */
+#panel::after{content:"";display:block;height:55%}
+.pg+.pg{margin-top:56px;padding-top:8px;border-top:1px solid var(--rule)}
+.pg{transition:opacity .4s}
+.pg:not(.on){opacity:.4}
+.eyebrow{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--ink2);margin-top:28px}
+.eyebrow .num{font-size:12px;color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:1px 6px}
+.eyebrow .sep{flex:0 0 18px;height:1px;background:var(--rule)}
+h1{font-size:50px;line-height:1.12;font-weight:500;letter-spacing:.01em;margin:22px 0 18px}
+h1 small{display:block;font-size:22px;font-weight:300;color:var(--ink2);margin-top:10px;letter-spacing:.04em}
+h2{font-size:32px;line-height:1.25;font-weight:500;letter-spacing:.02em;margin:18px 0 14px;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px}
+h2 em{font-style:normal;font-family:var(--mono);font-weight:300;font-size:15px;color:var(--ink3)}
+h2 .badge{font-family:var(--mono);font-size:14px;font-weight:500;color:#fff;background:var(--c,var(--ink));border-radius:4px;padding:3px 8px;align-self:center}
+h3{font-size:13px;font-weight:500;letter-spacing:.08em;color:var(--ink2);margin:24px 0 10px}
+.lede{font-size:16px;line-height:1.85;color:var(--ink2);margin:0 0 20px;font-weight:300}
+.lede b{color:var(--ink);font-weight:500}
+.hint{font-size:13px;color:var(--ink3);line-height:1.7;margin-top:28px}
+.foot{font-size:11.5px;color:var(--ink3);line-height:1.7;margin-top:26px;border-top:1px solid var(--rule);padding-top:12px}
+.foot a{color:var(--ink2)}
+
+.figs{display:grid;grid-template-columns:repeat(2,1fr);gap:0 24px;border-top:1px solid var(--rule);padding-top:14px}
+.figs.three{grid-template-columns:repeat(3,1fr);gap:0 16px}
+.fig .n{font-family:var(--mono);font-size:30px;font-weight:300;line-height:1.1}
+.fig .n small{font-family:var(--sans);font-size:14px;margin-left:3px;color:var(--ink2)}
+.fig .k{font-size:12px;color:var(--ink3);margin-top:4px;line-height:1.5}
+.fig .v{font-size:14px;line-height:1.5;margin-top:4px;color:var(--ink)}
+
+ul.does{list-style:none;margin:0;padding:0}
+ul.does li{position:relative;padding:8px 0 8px 22px;border-top:1px solid var(--rule);font-size:14.5px;line-height:1.65;color:var(--ink)}
+ul.does li::before{content:"";position:absolute;left:2px;top:17px;width:8px;height:8px;border-radius:2px;background:var(--c)}
+.ver{font-family:var(--mono);font-size:10.5px;padding:1px 5px;border-radius:3px;border:1px solid var(--rule);color:var(--ink2);margin-right:6px;vertical-align:1px}
+.ver.tp{border-style:dashed}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--mono);font-size:12.5px;padding:4px 10px;border-radius:99px;border:1px solid var(--rule);background:var(--card)}
+.analogy{margin-top:22px;padding:14px 16px;border-left:3px solid var(--c);background:var(--card);border-radius:0 6px 6px 0}
+.analogy .k{font-size:12px;letter-spacing:.08em;color:var(--ink3)}
+.analogy p{margin:6px 0 0;font-size:15px;line-height:1.75}
+
+/* overview rows */
+.stack{display:flex;flex-direction:column;border-top:1px solid var(--rule)}
+.row{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;text-align:left;background:none;border:0;border-bottom:1px solid var(--rule);padding:9px 4px;transition:background .2s,padding .25s}
+.row:hover,.row.hl{background:var(--card);padding-left:10px}
+.row .L{font-family:var(--mono);font-size:12px;font-weight:500;color:#fff;background:var(--c);border-radius:4px;text-align:center;padding:2px 0}
+.row .nm{font-size:15px}
+.row .nm small{display:block;font-size:12.5px;color:var(--ink3);margin-top:2px}
+.row .scope{font-size:11.5px;color:var(--ink2);text-align:right}
+.group-tag{font-size:11.5px;color:var(--ink3);letter-spacing:.08em;margin:14px 0 6px}
+.hier{margin-top:18px;font-size:13.5px;line-height:1.8;color:var(--ink2)}
+.hier b{font-family:var(--mono);font-weight:500;color:var(--ink)}
+
+/* flow */
+.fl-ctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 14px}
+.scrub{width:100%;accent-color:var(--ink)}
+.scrub-k{display:flex;justify-content:space-between;font-size:11px;color:var(--ink3);font-family:var(--mono);margin-top:2px}
+.fl-now{display:flex;align-items:baseline;gap:10px;margin:18px 0 10px;flex-wrap:wrap}
+.fl-now .ph{font-family:var(--mono);font-size:12px;padding:2px 8px;border-radius:4px;background:var(--ink);color:var(--bg)}
+.fl-now .sn{font-family:var(--mono);font-size:12px;color:var(--ink3)}
+.fl-now .tt{font-size:21px;font-weight:500;flex-basis:100%}
+.fl-who{display:flex;flex-wrap:wrap;gap:6px}
+.fl-note{font-size:15px;line-height:1.8;margin-top:14px;min-height:7.2em}
+.fl-note b{font-weight:500}
+
+/* compare */
+.cmp{width:100%;border-collapse:collapse;font-size:14px}
+.cmp th{font-size:12px;font-weight:400;color:var(--ink3);text-align:left;padding:6px 6px 6px 0;border-bottom:1px solid var(--rule)}
+.cmp td{padding:9px 6px 9px 0;border-bottom:1px solid var(--rule);vertical-align:top;line-height:1.5}
+.cmp td small{display:block;color:var(--ink3);font-size:11.5px}
+.cmp td.y{font-family:var(--mono);text-align:center;width:56px}
+.cmp td.y.no{color:var(--ink3)}
+.dot{display:inline-block;font-style:normal;font-family:var(--mono);font-size:11px;color:#fff;background:var(--c);border-radius:3px;padding:1px 5px}
+
+/* quiz */
+.qcard{border:1px solid var(--rule);background:var(--card);border-radius:8px;padding:16px 18px}
+.qcard .qn{font-family:var(--mono);font-size:11.5px;color:var(--ink3)}
+.qcard p{font-size:17px;line-height:1.7;margin:8px 0 0}
+.qbtns{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:14px}
+.qbtns button{border:1px solid var(--rule);background:var(--btn);border-radius:6px;padding:7px 2px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;transition:transform .15s,border-color .2s,background .2s}
+.qbtns button b{font-family:var(--mono);font-size:11.5px;font-weight:500;color:var(--c);white-space:nowrap}
+.qbtns button span{font-size:11px;color:var(--ink2);white-space:nowrap}
+.qbtns button:hover:not(:disabled){transform:translateY(-2px);border-color:var(--c)}
+.qbtns button:disabled{cursor:default}
+.qbtns button.right{background:var(--c);border-color:var(--c)}
+.qbtns button.right b,.qbtns button.right span{color:#fff}
+.qbtns button.wrong{border-color:var(--bad);border-style:dashed;opacity:.8}
+.fb{min-height:6.2em;font-size:14.5px;line-height:1.75;margin-top:14px}
+.fb .res{font-weight:500}
+.fb .res.ok{color:var(--ok)} .fb .res.no{color:var(--bad)}
+.qfoot{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:13px;color:var(--ink2)}
+
+/* bottom bar */
+#bar{position:fixed;left:56px;right:40px;bottom:28px;height:40px;z-index:3;display:flex;align-items:center;gap:10px}
+#bar #bPrev,#bar #bNext{width:40px;height:40px;padding:0;display:grid;place-items:center}
+#ticks{display:flex;gap:4px;align-items:center}
+#ticks button{border:0;background:none;padding:6px 3px;font-family:var(--mono);font-size:11px;color:var(--ink3);position:relative;border-radius:4px}
+#ticks button::after{content:"";position:absolute;left:3px;right:3px;bottom:1px;height:2px;border-radius:2px;background:var(--rule);transition:background .3s}
+#ticks button.on{color:var(--ink)}
+#ticks button.on::after{background:var(--ink)}
+#ticks button:hover{color:var(--ink)}
+#curT{font-size:13px;color:var(--ink2);margin-left:6px;white-space:nowrap}
+#progress{position:fixed;left:0;top:0;height:2px;background:var(--ink);z-index:4;width:0;transition:width .25s linear}
+
+@media (max-width:820px){
+  .veil{display:none}
+  #top{left:16px;right:16px;top:10px}
+  .brand span:not(.div){display:none}.brand .div{display:none}
+  .ctl button{padding:6px 10px;font-size:12px}
+  #stage{bottom:auto;height:var(--mh);top:52px}
+  #tools{top:calc(52px + var(--mh) - 34px);right:16px}
+  #tools span{display:none}
+  .zl input{width:70px}
+  #panel{left:16px;right:16px;width:auto;top:calc(52px + var(--mh));bottom:64px;padding-right:0;border-top:1px solid var(--rule)}
+  .eyebrow{margin-top:16px}
+  h1{font-size:34px;margin:14px 0}
+  h1 small{font-size:17px}
+  h2{font-size:25px}
+  .fig .n{font-size:24px}
+  #bar{left:16px;right:16px;bottom:12px}
+  #ticks{overflow-x:auto;scrollbar-width:none;flex:1}
+  #curT{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .pg{transition:none}
+}
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<div id="progress"></div>
+<div id="stage"></div>
+<div class="veil"></div>
+
+<header id="top">
+  <div class="brand"><b>VCF 9.1.1</b><span class="div"></span><span>VMware Cloud Foundation 元件互動導覽</span></div>
+  <div class="ctl">
+    <button id="bAuto" aria-pressed="false">▶ 自動播放</button>
+    <button id="bTheme">明暗</button>
+    <button id="bFull">全螢幕</button>
+  </div>
+</header>
+
+<div id="tools"><span>⟲ 拖曳旋轉、滾輪換章，點選任一元件</span><label class="zl">模型<input id="zoom" type="range" min="0.8" max="1.2" step="0.01" value="1" aria-label="模型大小"></label><button id="bReset">↺ 重設視角</button></div>
+
+<aside id="panel" aria-live="polite"></aside>
+
+<nav id="bar" aria-label="章節">
+  <button id="bPrev" aria-label="上一章">←</button>
+  <div id="ticks"></div>
+  <button id="bNext" aria-label="下一章">→</button>
+  <div id="curT"></div>
+</nav>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+/* ───────────── 內容（依 Broadcom TechDocs VCF 9.1／9.1.1） ───────────── */
+const V = (v,tp) => `<span class="ver${tp?' tp':''}">${v}${tp?' TP':''}</span>`;
+const COMPS = [
+  {id:'esx',q:'ESX',tag:'ESX',zh:'虛擬化主機',en:'ESX Hypervisor',color:'#4A7DC0',scope:'每台主機',grp:'infra',
+   brief:'裝在每台實體伺服器上的 hypervisor',
+   lede:'VCF 的地基：安裝在每台實體伺服器上的 hypervisor，把 CPU、記憶體、網卡與磁碟切分給一台台虛擬機器（VM）。VCF 9 起產品名稱統一為 <b>ESX</b>。',
+   figs:[['範圍','每台實體主機'],['所在','管理網域與工作負載網域'],['9.1.1 版本','9.1.1.0<br><span class="mono" style="font-size:11px;color:var(--ink3)">build 25714478</span>']],
+   does:['在一台實體伺服器上同時執行多台 VM，並隔離彼此的資源',
+     V('9.1')+'NVMe 記憶體分層強化：熱分頁留在 DRAM、冷分頁移到本機 NVMe，增加可用記憶體，並新增軟體鏡像與節省成本分析',
+     V('9.1')+'Live Patching（需 TPM 主機）：修補直接套用到執行中的核心，VM 不必停機、不需維護時段',
+     V('9.1')+'vSphere Elastic Provisioning：以網路開機（UEFI、HTTP/S）在裸機上自動安裝與設定 ESX'],
+   chips:['Hypervisor','VMkernel','NVMe Memory Tiering','Live Patching','Elastic Provisioning','VMware Tools'],
+   analogy:'大樓的地基與樓板：每一戶（VM）都蓋在它上面，彼此用牆隔開。'},
+  {id:'vc',q:'vCenter',tag:'vCenter',zh:'叢集管理',en:'vCenter',color:'#2E9A8C',scope:'每個網域',grp:'infra',
+   brief:'集中管理主機、叢集與 VM',
+   lede:'每個網域的大腦：把多台 ESX 主機集中管理成<b>叢集</b>，提供 vMotion、DRS、HA 等叢集功能。VCF 中<b>每個網域都有自己的 vCenter</b>，它們都以 VM 形式執行在管理網域上（模型中畫在各網域上方，方便辨識）。',
+   figs:[['範圍','每個網域一套'],['所在','管理網域（VM）'],['9.1.1 版本','9.1.1.0<br><span class="mono" style="font-size:11px;color:var(--ink3)">build 25712839</span>']],
+   does:['建立與管理叢集、資源池、VM 與內容庫（Content Library）',
+     'DRS 自動平衡負載、vSphere HA 在主機故障時重啟 VM、vMotion 不停機搬移 VM',
+     '以 vSphere Lifecycle Manager 映像統一管理主機版本，並作為 Supervisor 的啟用入口',
+     V('9.1')+'可直接在 vCenter 使用 NSX 的 VPC 與 Transit Gateway，並在 vCenter 設定 overlay 服務'],
+   chips:['Cluster','DRS','vSphere HA','vMotion','Content Library','vLCM','Storage Policy'],
+   analogy:'大樓管理中心：知道每層樓還剩多少空間，哪一層出問題就把住戶搬到別層。'},
+  {id:'vsan',q:'vSAN',tag:'vSAN',zh:'軟體定義儲存',en:'vSAN',color:'#6E5BB0',scope:'每個叢集',grp:'infra',
+   brief:'把主機本機磁碟彙整成共享儲存',
+   lede:'把叢集裡每台 ESX 主機的本機磁碟彙整成一個共享的 vSAN 資料存放區，不需要外接儲存陣列。以<b>儲存原則（SPBM）</b>逐台 VM 決定容錯等級與效能。',
+   figs:[['範圍','每個叢集'],['架構','ESA（新）／OSA'],['9.1.1 版本','9.1.1.0（隨 ESX 提供）']],
+   does:['把主機本機 NVMe／SSD 彙整成單一共享資料存放區，隨主機擴充線性成長',
+     '依儲存原則設定 RAID-1／5／6 與可容忍的故障數，原則可逐台 VM 套用',
+     '延伸叢集（stretched cluster）以見證節點（Witness）橫跨兩個站點',
+     V('9.1')+'去重與壓縮擴大適用範圍，支援搭配靜態資料加密'+'；'+V('9.1',1)+'原生 S3 相容物件儲存'],
+   chips:['ESA','OSA','SPBM','Stretched Cluster','Witness','File Services','Dedup & Compression'],
+   analogy:'共用倉庫：每戶貢獻一部分儲藏室，合起來變成整棟都能用的大倉庫，而且自動多存一份。'},
+  {id:'nsx',q:'NSX',tag:'NSX',zh:'網路與安全',en:'NSX',color:'#D99A1E',scope:'每個網域',grp:'infra',
+   brief:'軟體定義網路、VPC 與防火牆',
+   lede:'軟體定義網路與安全：在實體網路之上建立虛擬網路（overlay 或 VLAN），提供路由、防火牆、NAT 與負載平衡。VCF 9 的網路主角是 <b>VPC</b> 與 <b>Transit Gateway</b>，讓租戶自助建立隔離的網路。',
+   figs:[['組成','NSX Manager、NSX Edge、Virtual Network Appliance'],['所在','Manager 在管理網域，Edge 連接實體網路'],['9.1.1 版本','9.1.1.0<br><span class="mono" style="font-size:11px;color:var(--ink3)">build 25691509</span>']],
+   does:['NSX Edge 負責實體網路與 NSX 網路之間的南北向流量，以及負載平衡、DHCP 等有狀態服務',
+     'VPC 與 Transit Gateway（集中式／分散式）提供多租戶網路隔離與 IP 位址管理（IPAM）',
+     V('9.1')+'新增 Virtual Network Appliance：VM 形式，讓分散式 VPC 也有 NAT 與負載平衡；可共用管理網域與工作負載網域的 NSX Manager',
+     V('9.1.1')+'EVPN 強化：Transit Gateway 以 VXLAN 直連 leaf 交換器；EVPN 分散式模式支援 NAT、負載平衡與 DHCP relay'],
+   chips:['VPC','Transit Gateway','NSX Edge','vDefend Firewall','EVPN','IPAM','Avi Load Balancer'],
+   analogy:'大樓的走廊、電梯與門禁：誰能進哪一戶、訪客從哪個大門進出，都由軟體規劃。'},
+  {id:'sup',q:'VKS',tag:'Supervisor · VKS',zh:'Kubernetes 平台',en:'vSphere Supervisor & VKS',color:'#8A9A3B',scope:'每個叢集',grp:'infra',
+   brief:'用 Kubernetes API 交付 VM 與叢集',
+   lede:'把 vSphere 叢集變成 Kubernetes 平台。<b>vSphere Supervisor</b> 讓叢集透過 Kubernetes API 交付 VM、容器與服務；<b>VKS</b>（vSphere Kubernetes Service）在其上建立一致、可升級的 Kubernetes 叢集。',
+   figs:[['資源單位','vSphere Namespace'],['9.1.1 版本','Supervisor 9.1.1.0、VKS 3.7'],['附帶服務','Harbor、Contour、External DNS、Argo CD']],
+   does:['vSphere Namespace 劃分資源配額、權限、VM 類別與儲存原則',
+     '以 YAML 宣告式交付 VM（VM Service）與 Kubernetes 叢集（VKS）',
+     V('9.1')+'VKS 與 VM Fast-Deploy：以 linked clone 加速建立與升級；簡化的容器即服務（CaaS）',
+     V('9.1.1')+'VKS 3.7 附加元件（Add-on）管理框架；Argo CD 可自動探索並掛上 VKS 叢集'],
+   chips:['vSphere Namespace','VM Service','VKS','VKr','Harbor','Contour','Argo CD','kubectl'],
+   analogy:'大樓裡的共享辦公室：開發者刷卡（kubectl）就能租到一間家具、網路都配好的辦公室。'},
+  {id:'sddc',q:'SDDC Mgr',tag:'SDDC Manager',zh:'網域生命週期',en:'SDDC Manager',color:'#737881',scope:'每個 Instance',grp:'mgmt',
+   brief:'建立網域、擴充主機、升級基礎設施',
+   lede:'VCF 底層基礎設施的生命週期引擎：<b>部署工作負載網域、擴充叢集與主機，以及 ESX、vCenter、NSX、HCX 的升級修補</b>。TechDocs 把它列為「VCF Operations 的一部分」，日常從 VCF Operations 介面操作，由 SDDC Manager 執行。',
+   figs:[['範圍','每個 VCF Instance'],['所在','管理網域（VM）'],['規模','9.1：每個 Instance 最多 5,000 台主機']],
+   does:['部署工作負載網域，或把既有 vCenter 匯入成為工作負載網域',
+     '委任（commission）主機、擴充叢集，並設定 vSAN 延伸叢集',
+     'ESX、vCenter、NSX、HCX 的生命週期管理：預檢、升級順序與修補',
+     V('9.1')+'NSX Edge 升級移到網域升級序列最後；支援匯入的獨立主機與單主機叢集'],
+   chips:['Workload Domain','Host Commission','Domain Import','Prechecks','Upgrade Sequence','Stretched Cluster'],
+   analogy:'營建總包：要加蓋一棟新大樓（網域），或幫舊大樓換管線（升級），都由它排工序。'},
+  {id:'vcfms',q:'VCFMS',tag:'VCFMS',zh:'管理服務',en:'VCF Management Services',color:'#B0558F',scope:'Fleet＋Instance',grp:'mgmt',
+   brief:'9.1 新架構：容器化的共用管理服務',
+   lede:V('9.1')+'新架構：原本分散的管理功能改為<b>容器化服務</b>，跑在每個 Instance 共用的 <b>VCF services runtime</b> 上；其中 Fleet lifecycle 取代了 9.0 的獨立 Fleet Management Appliance。',
+   figs:[['Fleet 層級（第一個 Instance）','Fleet lifecycle、Identity broker、Log management、Salt RaaS、Software depot'],['Instance 層級（每個 Instance）','SDDC lifecycle、Real-time metrics、Salt master、Telemetry、services runtime'],['最新修補','9.1.1.0100（9/21）：Fleet lifecycle、SDDC lifecycle']],
+   does:['<b>Fleet lifecycle</b>：跨 Instance 規劃與排序升級，並負責各管理元件的安裝、升級、修補、備份與還原',
+     '<b>SDDC lifecycle</b>：在每個 Instance 內執行管理元件的安裝、更新與修補',
+     '<b>Identity broker</b> 串接企業身分提供者（IdP）做單一登入；<b>Software depot</b> 存放安裝檔與 OCI 映像',
+     '<b>Log management</b>、<b>Real-time metrics</b> 為 Day-N 部署；<b>Salt</b> 讓各元件維持期望的組態狀態'],
+   chips:['VCF services runtime','Fleet lifecycle','SDDC lifecycle','Identity broker','Software depot','Log management','Real-time metrics','Salt','Telemetry'],
+   analogy:'物業管理部：保全（身分）、維修排程（生命週期）、監視器（日誌與指標）集中在同一間辦公室。'},
+  {id:'ops',q:'Ops',tag:'VCF Operations',zh:'營運管理',en:'VCF Operations',color:'#C8553D',scope:'整個 Fleet',grp:'mgmt',
+   brief:'單一入口：建置、管理、營運、保護',
+   lede:'整個私有雲的單一管理入口。9.1 以 <b>Build、Manage、Operate、Protect</b> 四大支柱組織介面：從部署網域、授權、身分與憑證，到監控、容量成本與合規，都在這裡完成。',
+   figs:[['範圍','整個 VCF Fleet'],['隨附元件','Cloud proxy、License server、for networks、HCX、orchestrator'],['9.1.1 版本','9.1.1.0<br><span class="mono" style="font-size:11px;color:var(--ink3)">build 25679751</span>']],
+   does:['<b>Build</b>：Fleet 與網域生命週期、建立工作負載網域、LACP 等網路設定',
+     '<b>Manage</b>：授權（License server）、身分與存取、憑證、密碼、組態管理，以及容量與成本（chargeback）；'+V('9.1.1')+'憑證管理涵蓋更多元件，所有 VCF 憑證都有到期警示',
+     '<b>Operate</b>：ESX／vCenter／NSX／vSAN 健康狀態、日誌管理與即時指標（Real-time metrics）',
+     '<b>Protect</b>：合規與安全態勢管理、稽核紀錄與稽核軌跡'],
+   chips:['Build','Manage','Operate','Protect','Cloud proxy','License server','for networks','HCX','orchestrator'],
+   analogy:'整個社區的中控室：每棟樓的水電、保全、帳單與維修排程，都在同一面牆上。'},
+  {id:'auto',q:'Automation',tag:'VCF Automation',zh:'自助雲入口',en:'VCF Automation',color:'#3A8F5C',scope:'整個 Fleet',grp:'mgmt',
+   brief:'多租戶自助入口與配額政策',
+   lede:'自助式雲端入口：提供者（Provider）把基礎設施切成 <b>Organization</b>（租戶）並分配 <b>Region</b> 配額，應用團隊再在 <b>Project</b> 與 <b>Namespace</b> 裡自助申請 VM、Kubernetes 叢集與網路。',
+   figs:[['對象','提供者與租戶 Organization'],['租戶類型','All Apps／VM Apps'],['9.1.1 版本','9.1.1.0<br><span class="mono" style="font-size:11px;color:var(--ink3)">build 25714559</span>']],
+   does:['Provider Management：建立 Organization，配置 Region 配額、外部連線與外部 IP 區塊',
+     'All Apps 組織以 Supervisor 為基礎，交付 VM、VKS 叢集與服務；VM Apps 組織以範本交付 VM',
+     V('9.1')+'把 vDefend 防火牆與 Avi 負載平衡委派給租戶；從 VMware Cloud Director 原地遷移的工具',
+     V('9.1.1')+'支援 VLAN-backed VPC；'+V('9.1.1',1)+'Argo CD as a VCF Service（GitOps）'],
+   chips:['Organization','Region','Project','Namespace','All Apps','VM Apps','Blueprint','Content Library'],
+   analogy:'大樓的租賃櫃台：租戶在型錄上挑房型，櫃台依合約額度自動配好鑰匙與水電。'},
+  {id:'inst',q:'Installer',tag:'VCF Installer',zh:'安裝部署',en:'VCF Installer',color:'#9C6B3E',scope:'Day 0',grp:'mgmt',
+   brief:'Day 0：建立第一個 Instance',
+   lede:'Day 0 的起點：一台安裝設備，從線上或離線 depot 取得安裝檔，驗證主機後<b>部署新的 VCF Fleet 或 Instance</b>，也能把既有的 vSphere 環境<b>轉換（converge）</b>成 VCF 或 vSphere Foundation。',
+   figs:[['階段','Day 0'],['離線下載','VCF Download Tool'],['9.1.1 版本','9.1.1.0，與 SDDC Manager 同一個 build']],
+   does:['連到線上 depot，或使用以 VCF Download Tool 下載的離線 depot 取得安裝檔',
+     '依部署規格做預檢（DNS、NTP、網路、主機相容性），建立管理網域',
+     '部署新環境，或把既有的 vCenter 環境轉換成 VCF',
+     '部署完成後，設備轉為 SDDC Manager 模式繼續運作（BOM 中兩者為同一個 build）'],
+   chips:['Day 0','Online Depot','Offline Depot','VCF Download Tool','Deployment Spec','Converge'],
+   analogy:'建案的開工團隊：整地、打地基、裝好水電總機，完工後留下來當工務所（SDDC Manager）。'},
+];
+const C = Object.fromEntries(COMPS.map((c,i)=>[c.id,{...c,n:i+1}]));
+const keyOf = c => c.n===10 ? '0' : String(c.n);
+
+const FLOW = [
+  {ph:'Day 0',t:'準備安裝檔',on:['inst'],at:'inst',tag:'Binaries',
+   note:'部署 <b>VCF Installer</b> 設備，連到線上 depot；無法連外的環境，先用 <b>VCF Download Tool</b> 下載到離線 depot。'},
+  {ph:'Day 0',t:'驗證主機、建立管理網域',on:['inst','esxM','vsanM'],at:'esxM',tag:'Spec',
+   note:'Installer 依部署規格做預檢（DNS、NTP、網路、主機相容性），再把已安裝 <b>ESX</b> 的主機組成管理網域的叢集，並建立 <b>vSAN</b>。'},
+  {ph:'Day 0',t:'vCenter 與 NSX 上線',on:['vcM','nsxM'],at:'vcM',tag:'Mgmt plane',
+   note:'管理網域的 <b>vCenter</b> 與 <b>NSX Manager</b> 上線，叢集與網路有了自己的管理平面。'},
+  {ph:'Day 0',t:'VCF Operations 與管理服務',on:['ops','vcfms','sddc'],at:'vcfms',tag:'VCFMS',
+   note:'<b>VCF Operations</b> 與 <b>VCF Management Services</b>（fleet lifecycle、software depot、identity broker…）部署到 services runtime；Installer 設備轉為 <b>SDDC Manager</b>。'},
+  {ph:'Day 1',t:'委任主機、建立工作負載網域',on:['ops','sddc','esxW'],at:'esxW',tag:'WLD',
+   note:'在 VCF Operations 的 Build 發起，由 <b>SDDC Manager</b> 執行：委任新主機，建立工作負載網域。'},
+  {ph:'Day 1',t:'網域的 vCenter 與 vSAN',on:['vcW','vsanW'],at:'vcW',tag:'vCenter',
+   note:'每個工作負載網域都有自己的 <b>vCenter</b>（實際以 VM 執行於管理網域）與自己的 <b>vSAN</b> 叢集。'},
+  {ph:'Day 1',t:'網路：VPC 與 Transit Gateway',on:['nsxW','nsxM'],at:'nsxW',tag:'VPC',
+   note:'<b>NSX</b> 為網域準備 overlay 或 VLAN 網路，<b>NSX Edge</b> 連接實體網路。9.1 提供讓網域「VPC-ready」的工作流程，也能共用管理網域的 NSX Manager。'},
+  {ph:'Day 1',t:'啟用 Supervisor',on:['sup','vcW'],at:'sup',tag:'Supervisor',
+   note:'在叢集上啟用 <b>vSphere Supervisor</b>，叢集就能透過 Kubernetes API 交付 VM、VKS 叢集與 Supervisor Services。'},
+  {ph:'Day 2',t:'租戶自助申請',on:['auto','sup'],at:'auto',tag:'Request',
+   note:'提供者在 <b>VCF Automation</b> 建立 Organization 並分配 Region 配額；應用團隊在自己的 Namespace 申請 VM 或 VKS 叢集。VCF Automation 也可以之後再由 fleet lifecycle 加裝。'},
+  {ph:'Day 2',t:'監控、容量與成本',on:['ops','vcfms'],at:'ops',tag:'Metrics',
+   note:'<b>VCF Operations</b> 彙整 ESX、vCenter、NSX、vSAN 的健康狀態，提供容量預測與成本分攤；Log management 與 Real-time metrics 補上日誌與高頻指標。'},
+  {ph:'Day 2',t:'規劃升級與修補',on:['vcfms','sddc','esxM','esxW','vcM','vcW'],at:'vcfms',tag:'9.1.1',
+   note:'<b>Fleet lifecycle</b> 規劃升級順序，<b>SDDC lifecycle</b>／<b>SDDC Manager</b> 執行。從 9.1.0 修補到 9.1.1 時：先修補 fleet lifecycle，再修補 VCF Operations 與 license server，之後才修補 ESX。'},
+];
+
+const QUIZ = [
+  {q:'想讓主機上較少使用的記憶體分頁移到本機 NVMe，用同樣的 DRAM 跑更多 VM。',a:'esx',why:'NVMe 記憶體分層（Memory Tiering）是 ESX hypervisor 的功能，9.1 加強了它。'},
+  {q:'一台主機要停機維修，希望上面的 VM 不中斷地搬到同叢集的其他主機。',a:'vc',why:'vMotion 與維護模式由 vCenter 協調，DRS 會自動挑選目的主機。'},
+  {q:'不想買外接儲存陣列，希望把每台主機的 NVMe 組成共享資料存放區，並依原則決定 RAID-1 或 RAID-5。',a:'vsan',why:'vSAN 彙整本機磁碟，以儲存原則（SPBM）逐台 VM 決定容錯方式。'},
+  {q:'應用團隊需要一個與其他租戶隔離的 VPC，透過 Transit Gateway 連到實體網路。',a:'nsx',why:'VPC 與 Transit Gateway 是 NSX 的網路物件。VCF Automation 只是讓租戶自助申請它們。'},
+  {q:'開發者想用 kubectl 套用一份 YAML，就拿到一個可升級的 Kubernetes 叢集。',a:'sup',why:'由 vSphere Supervisor 接收請求，VKS 建立並管理 Kubernetes 叢集。'},
+  {q:'要把一套既有的 vCenter 匯入成為工作負載網域，並設定 vSAN 延伸叢集。',a:'sddc',why:'TechDocs 列出這兩項是 SDDC Manager 的職責。SDDC Manager 屬於 VCF Operations 的一部分，通常從 VCF Operations 介面發起，實際由 SDDC Manager 執行。'},
+  {q:'需要規劃三個 VCF Instance 的升級先後順序，並排程管理元件的備份。',a:'vcfms',why:'這是 Fleet lifecycle 的工作，它屬於 VCF Management Services。從 VCF Operations 的 Build 支柱操作。'},
+  {q:'財務要求每月依部門產出虛擬機器的成本分攤（chargeback）報表。',a:'ops',why:'成本、容量與 chargeback 屬於 VCF Operations 的 Manage 支柱。'},
+  {q:'提供者要為新租戶建立 Organization、分配 Region 配額，並把 Avi 負載平衡開放給租戶自助使用。',a:'auto',why:'Organization、Region 配額與服務委派，都在 VCF Automation 的 Provider Management 設定。'},
+  {q:'全新的機房，第一次建立 VCF 的管理網域與第一個 VCF Instance。',a:'inst',why:'Day 0 部署由 VCF Installer 執行；完成後設備轉為 SDDC Manager 繼續運作。'},
+];
+
+const CH = [
+  {kind:'cover',t:'封面'},
+  {kind:'overview',t:'元件總覽'},
+  ...COMPS.map(c=>({kind:'comp',c:c.id,t:c.tag})),
+  {kind:'flow',t:'從 Day 0 到 Day 2'},
+  {kind:'compare',t:'VCF 與 VVF 對照'},
+  {kind:'quiz',t:'情境測驗'},
+];
+const chOfComp = id => CH.findIndex(c=>c.kind==='comp'&&c.c===id);
+const pad = n => String(n).padStart(2,'0');
+const SRC = `<p class="foot">資料來源（Broadcom TechDocs 與官方部落格）：
+<a href="https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-0-0-release-notes/what-s-new.html" target="_blank" rel="noopener">VCF 9.1 What's New</a>、
+<a href="https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-1-0-release-notes.html" target="_blank" rel="noopener">VCF 9.1.1 Release Notes</a>、
+<a href="https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-1-0-release-notes/vmware-cloud-foundation-9-1-1-0-bill-of-material.html" target="_blank" rel="noopener">9.1.1 Bill of Materials</a>、
+<a href="https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/deployment/vcf-management-appliances.html" target="_blank" rel="noopener">Components in VCF and vSphere Foundation</a>、
+<a href="https://blogs.vmware.com/cloud-foundation/2026/09/03/announcing-general-availability-of-vmware-cloud-foundation-9-1-1/" target="_blank" rel="noopener">9.1.1 GA 公告</a>、
+<a href="https://knowledge.broadcom.com/external/article/421038/" target="_blank" rel="noopener">KB 421038</a>（Installer 轉為 SDDC Manager 模式）。
+標示 <span class="ver tp">TP</span> 者為技術預覽。整理於 2026 年 10 月，以原廠最新文件為準。</p>`;
+
+/* ───────────── 面板 ───────────── */
+const panel = document.getElementById('panel');
+function secCover(i){return `
+<div class="eyebrow"><span class="num">${pad(i)}</span>私有雲平台<span class="sep"></span>GA 2026-09-03</div>
+<h1>VMware Cloud<br>Foundation 9.1.1<small>各元件功能導覽</small></h1>
+<p class="lede">VCF 把運算（ESX、vCenter）、儲存（vSAN）、網路（NSX）、Kubernetes（Supervisor／VKS）與管理平面（VCF Operations、VCF Automation、管理服務）整合成<b>一套私有雲平台</b>。9.1.1 是 9.1 的維護版本，以提升可支援性為主。</p>
+<div class="figs three">
+  <div class="fig"><div class="n">10<small>大元件</small></div><div class="k">本站逐一介紹</div></div>
+  <div class="fig"><div class="n">5,000</div><div class="k">每個 VCF Instance 可管理的主機數（9.1）</div></div>
+  <div class="fig"><div class="n">4<small>支柱</small></div><div class="k">VCF Operations：Build、Manage、Operate、Protect</div></div>
+</div>
+<p class="hint">往下捲動或按 → 、空白鍵瀏覽，F 切換全螢幕；三維畫面上也能滾動換章、拖曳旋轉，點選任一元件可直接跳到該章。右上角的「模型」橫軸可調整模型大小。</p>
+${SRC}`}
+function secOverview(i){
+  const row = c => `<button class="row" data-comp="${c.id}" style="--c:${c.color}"><span class="L">${pad(C[c.id].n)}</span><span class="nm">${c.tag} <span style="color:var(--ink3);font-size:12.5px">${c.zh}</span><small>${c.brief}</small></span><span class="scope">${c.scope}</span></button>`;
+  return `
+<div class="eyebrow"><span class="num">${pad(i)}</span>總覽</div>
+<h2>兩個網域，一個管理平面</h2>
+<p class="lede">模型左邊是<b>管理網域</b>，執行所有管理元件；右邊是<b>工作負載網域</b>，執行應用。上方漂浮的是管理整個 Fleet 的 VCF Operations 與 VCF Automation。點選任一列查看細節。</p>
+<div class="group-tag">基礎設施　每個網域都有</div>
+<div class="stack">${COMPS.filter(c=>c.grp==='infra').map(row).join('')}</div>
+<div class="group-tag">管理與營運　管理網域／整個 Fleet</div>
+<div class="stack">${COMPS.filter(c=>c.grp==='mgmt').map(row).join('')}</div>
+<p class="hier">層級由大到小：<b>Fleet</b>（一組由同一套 VCF Operations 管理的環境）› <b>Instance</b>（每個都有自己的 SDDC Manager 與管理網域）› <b>Domain</b>（管理網域、工作負載網域，各有自己的 vCenter）› <b>Cluster</b> › <b>Host</b>。</p>`}
+function secComp(i,id){const d=C[id];return `
+<div class="eyebrow"><span class="num">${pad(i)}</span>${pad(d.n)} / 10<span class="sep"></span>${d.grp==='infra'?'基礎設施':'管理與營運'}</div>
+<h2><span class="badge">${d.tag}</span>${d.zh}<em>${d.en}</em></h2>
+<p class="lede">${d.lede}</p>
+<div class="figs three">${d.figs.map(([k,v])=>`<div class="fig"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}</div>
+<h3>負責什麼</h3>
+<ul class="does">${d.does.map(x=>`<li>${x}</li>`).join('')}</ul>
+<h3>相關名詞</h3>
+<div class="chips">${d.chips.map(p=>`<span class="chip">${p}</span>`).join('')}</div>
+<div class="analogy"><span class="k">大樓比喻</span><p>${d.analogy}</p></div>`}
+function secFlow(i){return `
+<div class="eyebrow"><span class="num">${pad(i)}</span>元件如何合作<span class="sep"></span>示意流程</div>
+<h2>從 Day 0 到 Day 2</h2>
+<div class="fl-ctl">
+  <button class="btn" id="fBack">◀ 上一步</button>
+  <button class="btn" id="fPlay">Ⅱ 暫停</button>
+  <button class="btn" id="fFwd">下一步 ▶</button>
+  <button class="btn" id="fRe">↻ 重播</button>
+</div>
+<input class="scrub" id="fScrub" type="range" min="0" max="${FLOW.length-1}" step="1" value="0" aria-label="流程步驟">
+<div class="scrub-k"><span>Day 0</span><span>Day 1</span><span>Day 2</span></div>
+<div class="fl-now"><span class="ph" id="fPh"></span><span class="sn" id="fSn"></span><span class="tt" id="fT"></span></div>
+<div class="fl-who" id="fWho"></div>
+<p class="fl-note" id="fNote"></p>
+<p class="foot">跟著一套 VCF 從無到有：Day 0 建立管理網域，Day 1 建立工作負載網域，Day 2 交付與營運。步驟為<b>概念示意</b>，實際部署順序以 VCF Installer 與 TechDocs 為準。</p>`}
+function secCompare(i){
+  const rows = [
+    ['ESX、vCenter','',1,1],
+    ['VCF Operations','含 Cloud proxy、License server',1,1],
+    ['Fleet lifecycle、SDDC lifecycle','',1,1],
+    ['Log management、Software depot、Telemetry','',1,1],
+    ['NSX Manager、NSX Edge','軟體定義網路與 VPC',1,0],
+    ['SDDC Manager','網域部署與基礎設施生命週期',1,0],
+    ['VCF Automation','多租戶自助入口',1,0],
+    ['Identity broker、Salt、Real-time metrics','',1,0],
+    ['VCF Operations for networks、HCX','網路分析、工作負載遷移',1,0],
+  ];
+  const y = v => `<td class="y${v?'':' no'}">${v?'✓':'—'}</td>`;
+  return `
+<div class="eyebrow"><span class="num">${pad(i)}</span>產品線對照</div>
+<h2>VCF 與 vSphere Foundation</h2>
+<p class="lede"><b>vSphere Foundation（VVF）</b>是以 vSphere 與 VCF Operations 為核心的版本；<b>VCF</b> 再加上 NSX 網路、SDDC Manager 與 VCF Automation，構成完整私有雲。模型左邊亮起的就是 VCF 才有的元件。</p>
+<table class="cmp">
+  <thead><tr><th>元件</th><th style="text-align:center">VCF</th><th style="text-align:center">VVF</th></tr></thead>
+  <tbody>${rows.map(r=>`<tr><td>${r[0]}${r[1]?`<small>${r[1]}</small>`:''}</td>${y(r[2])}${y(r[3])}</tr>`).join('')}</tbody>
+</table>
+<p class="foot">依 TechDocs〈Components in VCF and vSphere Foundation〉的適用標示整理。vSAN 與 Supervisor／VKS 不在該表內，兩者在各版本的授權與容量額度請以 Broadcom 授權文件為準，因此不列入對照。</p>`}
+function secQuiz(i){return `
+<div class="eyebrow"><span class="num">${pad(i)}</span>動手判斷</div>
+<h2>這是哪個元件負責的？</h2>
+<p class="lede">讀情境，選出主要負責的元件，也可以直接點模型或按數字鍵 1–9、0。答完後模型會標出正確答案。</p>
+<div class="qcard"><div class="qn" id="qN"></div><p id="qT"></p></div>
+<div class="qbtns" id="qB">${COMPS.map(c=>`<button data-ans="${c.id}" style="--c:${c.color}"><b>${keyOf(C[c.id])} ${c.q}</b><span>${c.zh}</span></button>`).join('')}</div>
+<div class="fb" id="qF"></div>
+<div class="qfoot"><span id="qS"></span><button class="btn" id="qNext">下一題 →</button></div>`}
+
+panel.innerHTML = CH.map((c,i)=>{
+  const body = c.kind==='cover'?secCover(i):c.kind==='overview'?secOverview(i):c.kind==='comp'?secComp(i,c.c):c.kind==='flow'?secFlow(i):c.kind==='compare'?secCompare(i):secQuiz(i);
+  return `<section class="pg" data-i="${i}" ${c.c?`style="--c:${C[c.c].color}"`:''}>${body}</section>`;
+}).join('');
+const sections = [...panel.querySelectorAll('.pg')];
+
+const ticks = document.getElementById('ticks');
+ticks.innerHTML = CH.map((c,i)=>`<button data-go="${i}" title="${c.t}" aria-label="${pad(i)} ${c.t}">${pad(i)}</button>`).join('');
+const tickBtns = [...ticks.children];
+
+/* ───────────── 三維場景 ───────────── */
+const stage = document.getElementById('stage');
+const mqMobile = matchMedia('(max-width:820px)');
+const reduced = matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+const renderer = new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+const labelR = new CSS2DRenderer();
+labelR.domElement.className = 'labels';
+stage.appendChild(labelR.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(32,1,0.1,200);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = .08;
+controls.enablePan = false; controls.minDistance = 7; controls.maxDistance = 45;
+// 3D 區的滾輪改成捲動面板換章；模型大小改用右上角的「模型」橫軸
+controls.enableZoom = false;
+stage.addEventListener('wheel',e=>{ e.preventDefault(); panel.scrollTop += e.deltaMode===1 ? e.deltaY*16 : e.deltaY; },{passive:false});
+controls.maxPolarAngle = Math.PI*0.48; controls.autoRotateSpeed = 0.6;
+
+const hemi = new THREE.HemisphereLight(0xffffff,0xc9cac6,2.0); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffffff,2.2);
+sun.position.set(7,15,9); sun.castShadow = true;
+sun.shadow.mapSize.set(2048,2048);
+// 陰影相機只框住場景實際範圍：x 約 -7.6～8，含漂浮的 Fleet 面板（y 到 4）
+Object.assign(sun.shadow.camera,{left:-10,right:10,top:8,bottom:-8,near:4,far:36});
+sun.shadow.radius = 4;
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
+scene.add(sun);
+// 補光：不投影，只提亮面向鏡頭的側面
+const fill = new THREE.DirectionalLight(0xffffff,.7);
+fill.position.set(6,3,12); scene.add(fill);
+const groundMat = new THREE.ShadowMaterial({opacity:.16});
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(90,90),groundMat);
+ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
+
+// 主場景放在 world 群組裡，對照章時整體縮小並左移
+const world = new THREE.Group(); scene.add(world);
+const worldS = {s:1,x:0,st:1,xt:0};
+
+const edgeMats = [];
+const bodyMats = []; // {m, color, mix}
+const units = [];
+const pickables = [];
+
+function label(html, cls, color){
+  const el = document.createElement('div');
+  el.className = 'lbl '+(cls||'');
+  if(color) el.style.setProperty('--c',color);
+  el.innerHTML = `<div class="in">${html}</div>`;
+  return {el, obj:new CSS2DObject(el)};
+}
+// 相同尺寸共用同一份幾何體；材質仍各自獨立，因為透明度是逐個 unit 控制
+const geoCache = new Map(), edgeCache = new Map();
+function boxGeo(w,h,d){
+  const k = `${w.toFixed(3)},${h.toFixed(3)},${d.toFixed(3)}`;
+  if(!geoCache.has(k)) geoCache.set(k,new THREE.BoxGeometry(w,h,d));
+  return geoCache.get(k);
+}
+function edgesOf(geo){
+  if(!edgeCache.has(geo)) edgeCache.set(geo,new THREE.EdgesGeometry(geo));
+  return edgeCache.get(geo);
+}
+function addEdges(mesh, op=.42){
+  const m = new THREE.LineBasicMaterial({color:0x161616,transparent:true,opacity:op});
+  edgeMats.push(m);
+  const l = new THREE.LineSegments(edgesOf(mesh.geometry),m);
+  mesh.add(l); return l;
+}
+function makeUnit(root, home, labels=[], parent=world){
+  root.position.copy(home);
+  const u = {root, home:home.clone(), parts:[], labels, ems:[], vis:{t:1,c:1}, dim:{t:1,c:1}, off:{t:new THREE.Vector3(), c:new THREE.Vector3()}};
+  u.casters = [];
+  const seen = new Set();
+  root.traverse(o=>{
+    if(o.material && !seen.has(o.material)){
+      seen.add(o.material);
+      o.material.transparent = true; u.parts.push({m:o.material, base:o.material.opacity, tr:true});
+      if(o.material.emissive) u.ems.push(o.material);
+    }
+    if(o.isMesh && o.castShadow) u.casters.push(o);
+    o.userData.u = u;
+  });
+  units.push(u); parent.add(root); return u;
+}
+function bodyMat(id, mix=.72){
+  const m = new THREE.MeshStandardMaterial({color:0xffffff,roughness:.85,metalness:0});
+  bodyMats.push({m,color:new THREE.Color(C[id].color),mix}); return m;
+}
+function colMat(id){
+  const m = new THREE.MeshStandardMaterial({color:C[id].color,roughness:.6});
+  bodyMats.push({m,color:new THREE.Color(C[id].color),mix:0}); return m;
+}
+function bx(g, id, w,h,d, mat, x,y,z, op=.42, pick=true){
+  const m = new THREE.Mesh(boxGeo(w,h,d),mat);
+  m.position.set(x,y,z); m.castShadow = true; m.receiveShadow = true;
+  m.userData.comp = id; addEdges(m,op); g.add(m);
+  if(pick) pickables.push(m);
+  return m;
+}
+const compLabel = (id, cls) => label(`<b>${C[id].tag}</b><i>${C[id].zh}</i>`, 'main '+(cls||''), C[id].color);
+
+/* 版面：管理網域在左（x=-3.3），工作負載網域在右（x=+3.3） */
+const DM = -3.3, DW = 3.3;
+const HOST_Y = .53, SHEET_Y = .85, TOP = .88;
+const U = {};
+function reg(key, comp, u){ u.key = key; u.comp = comp; U[key] = u; return u; }
+
+function hosts(x, withLabel){
+  const g = new THREE.Group();
+  const bm = bodyMat('esx',.78), cm = colMat('esx');
+  // 本體與前面板不重疊，避免 z-fighting
+  for(const dx of [-1.03,1.03]) for(const dz of [-.8,.8]){
+    bx(g,'esx',1.9,.5,1.35,bm,dx,0,dz-.05);
+    bx(g,'esx',1.9,.5,.1,cm,dx,0,dz+.675,.3);
+  }
+  const labels = [];
+  if(withLabel){ const lb = compLabel('esx'); lb.obj.position.set(2.15,0,.75); g.add(lb.obj); labels.push(lb.el); }
+  return makeUnit(g,new THREE.Vector3(x,HOST_Y,0),labels);
+}
+function vsanSlab(x, withLabel){
+  const g = new THREE.Group();
+  bx(g,'vsan',4.4,.28,3.4,bodyMat('vsan',.5),0,0,0);
+  const cm = colMat('vsan');
+  for(let k=0;k<8;k++) bx(g,'vsan',.36,.12,.04,cm,-1.75+k*.5,0,1.72,.25,false);
+  const labels = [];
+  if(withLabel){ const lb = compLabel('vsan'); lb.obj.position.set(2.35,0,1.55); g.add(lb.obj); labels.push(lb.el); }
+  return makeUnit(g,new THREE.Vector3(x,.14,0),labels);
+}
+function nsxSheet(x, withEdge){
+  const g = new THREE.Group();
+  const sm = bodyMat('nsx',.35); sm.opacity = .55;
+  bx(g,'nsx',4.6,.06,3.6,sm,0,0,0,.35);
+  const cm = colMat('nsx');
+  for(const dz of [-1.2,0,1.2]) bx(g,'nsx',4.4,.03,.05,cm,0,.045,dz,0,false);
+  for(const dx of [-1.6,0,1.6]) bx(g,'nsx',.05,.03,3.4,cm,dx,.045,0,0,false);
+  const labels = [];
+  if(withEdge){
+    // NSX Edge 放在兩個網域之間，橫向管線代表與實體網路及另一個網域的連線
+    bx(g,'nsx',.9,.7,1.1,colMat('nsx'),-DW,.35-SHEET_Y,0,.35);
+    const tube = new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,2.0,12),cm);
+    tube.rotation.z = Math.PI/2; tube.position.set(-DW,0,0); tube.castShadow = true; tube.userData.comp='nsx';
+    g.add(tube); pickables.push(tube);
+    const lb = compLabel('nsx','center'); lb.obj.position.set(-DW,-SHEET_Y,1.3); g.add(lb.obj); labels.push(lb.el);
+  }
+  return makeUnit(g,new THREE.Vector3(x,SHEET_Y,0),labels);
+}
+function vcBox(x, withLabel){
+  const g = new THREE.Group();
+  bx(g,'vc',.95,.63,.95,bodyMat('vc',.6),0,-.06,0);
+  bx(g,'vc',.95,.12,.95,colMat('vc'),0,.315,0,.3);
+  const labels = [];
+  if(withLabel){ const lb = compLabel('vc','center'); lb.obj.position.set(0,.68,0); g.add(lb.obj); labels.push(lb.el); }
+  return makeUnit(g,new THREE.Vector3(x-1.3,TOP+.375,-1.0),labels);
+}
+
+reg('vsanM','vsan',vsanSlab(DM,false));
+reg('vsanW','vsan',vsanSlab(DW,true));
+reg('esxM','esx',hosts(DM,false));
+reg('esxW','esx',hosts(DW,true));
+reg('nsxM','nsx',nsxSheet(DM,false));
+reg('nsxW','nsx',nsxSheet(DW,true));
+reg('vcM','vc',vcBox(DM,false));
+reg('vcW','vc',vcBox(DW,true));
+
+// SDDC Manager
+{
+  const g = new THREE.Group();
+  bx(g,'sddc',.95,.56,.95,bodyMat('sddc',.55),0,-.06,0);
+  bx(g,'sddc',.95,.12,.95,colMat('sddc'),0,.28,0,.3);
+  const lb = compLabel('sddc','center'); lb.obj.position.set(0,.62,.2); g.add(lb.obj);
+  reg('sddc','sddc',makeUnit(g,new THREE.Vector3(DM-1.3,TOP+.34,.85),[lb.el]));
+}
+// VCF Management Services：services runtime 托盤上的容器化服務
+{
+  const g = new THREE.Group();
+  bx(g,'vcfms',2.2,.1,2.9,bodyMat('vcfms',.6),0,0,0);
+  const bm = bodyMat('vcfms',.75), cm = colMat('vcfms');
+  for(let i=0;i<3;i++) for(let j=0;j<3;j++){
+    const h = [.42,.6,.5][(i+j)%3];
+    bx(g,'vcfms',.5,h,.5,(i+j)%2?bm:cm,-.65+i*.65,.05+h/2,-.85+j*.85,.35);
+  }
+  const lb = compLabel('vcfms'); lb.obj.position.set(1.35,.75,.3); g.add(lb.obj);
+  reg('vcfms','vcfms',makeUnit(g,new THREE.Vector3(DM+.95,TOP+.05,0),[lb.el]));
+}
+// Supervisor 與 VKS 叢集
+{
+  const g = new THREE.Group();
+  bx(g,'sup',2.5,.1,3.0,bodyMat('sup',.55),0,0,0);
+  const bm = bodyMat('sup',.78), cm = colMat('sup');
+  [[-.6,-.85,.7,1],[-.6,0,.45,0],[-.6,.85,.45,0],[.6,-.85,.55,1],[.6,0,.4,0],[.6,.85,.4,0]].forEach(([x,z,h,c])=>
+    bx(g,'sup',.55,h,.55,c?cm:bm,x,.05+h/2,z,.35));
+  const lb = compLabel('sup','center'); lb.obj.position.set(.9,1.25,-.7); g.add(lb.obj);
+  reg('sup','sup',makeUnit(g,new THREE.Vector3(DW+.95,TOP+.05,0),[lb.el]));
+}
+// Fleet 層級：VCF Operations 與 VCF Automation 兩面漂浮的主控台
+function fleetPanel(id, x, face){
+  const g = new THREE.Group();
+  bx(g,id,2.4,1.1,.22,bodyMat(id,.72),0,0,0);
+  const cm = colMat(id);
+  bx(g,id,2.4,.2,.22,cm,0,-.65,0,.3);
+  face(g,cm);
+  const lb = compLabel(id,'center'); lb.obj.position.set(0,.9,0); g.add(lb.obj);
+  return makeUnit(g,new THREE.Vector3(x,3.0,-1.0),[lb.el]);
+}
+reg('ops','ops',fleetPanel('ops',-4.4,(g,cm)=>{
+  [.3,.55,.4,.7].forEach((h,k)=>bx(g,'ops',.3,h,.06,cm,-.75+k*.5,-.4+h/2,.14,.25,false));
+}));
+reg('auto','auto',fleetPanel('auto',-1.5,(g,cm)=>{
+  for(let i=0;i<3;i++) for(let j=0;j<2;j++) bx(g,'auto',.55,.3,.06,(i+j)%2?cm:bodyMat('auto',.5),-.7+i*.7,.2-j*.42,.14,.25,false);
+}));
+// VCF Installer
+{
+  const g = new THREE.Group();
+  bx(g,'inst',.8,.82,.7,bodyMat('inst',.65),0,-.08,0);
+  bx(g,'inst',.8,.16,.7,colMat('inst'),0,.41,0,.3);
+  const lb = compLabel('inst','center'); lb.obj.position.set(0,-.72,.5); g.add(lb.obj);
+  reg('inst','inst',makeUnit(g,new THREE.Vector3(-5.9,.49,3.1),[lb.el]));
+}
+const mainUnits = units.slice();
+
+// 網域標題
+const domT = new THREE.Group();
+const tM = label('管理網域','title'); tM.obj.position.set(DM,.1,2.35); domT.add(tM.obj);
+const tW = label('工作負載網域','title'); tW.obj.position.set(DW,.1,2.35); domT.add(tW.obj);
+const domTU = makeUnit(domT,new THREE.Vector3(),[tM.el,tW.el]);
+
+// 對照章：vSphere Foundation 方塊（不在 world 裡）
+const VVF_X = 3.9;
+const VVF = [
+  {id:'esx',h:.55,txt:'ESX'},
+  {id:'vc',h:.6,txt:'vCenter'},
+  {id:'ops',h:.75,txt:'VCF Operations'},
+  {id:'vcfms',h:.5,txt:'Fleet／SDDC lifecycle 等'},
+];
+let vy = 0;
+const vvfU = VVF.map(b=>{
+  const g = new THREE.Group();
+  const bm = bodyMat(b.id,.55);
+  const m = new THREE.Mesh(boxGeo(2.2,b.h,2.2),bm);
+  m.castShadow = true; m.receiveShadow = true; addEdges(m,.5); g.add(m);
+  const lb = label(`<b>${b.txt}</b>`,'center',C[b.id].color);
+  lb.obj.position.set(0,0,1.12); g.add(lb.obj);
+  const u = makeUnit(g,new THREE.Vector3(VVF_X,vy+b.h/2,0),[lb.el],scene);
+  vy += b.h+.06; return u;
+});
+const cmpT = new THREE.Group();
+const tV = label('VCF','title'); tV.obj.position.set(-.5,0,3.3); cmpT.add(tV.obj);
+const tF = label('vSphere Foundation','title'); tF.obj.position.set(VVF_X,vy+.6,0); cmpT.add(tF.obj);
+const cmpTU = makeUnit(cmpT,new THREE.Vector3(),[tV.el,tF.el],scene);
+
+// 流程章的標記：一顆發光的八面體加上文字標籤
+const token = new THREE.Group();
+const tokMat = new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xffffff,emissiveIntensity:.5,roughness:.4});
+const tokMesh = new THREE.Mesh(new THREE.OctahedronGeometry(.22),tokMat);
+tokMesh.castShadow = true; token.add(tokMesh);
+const tokTag = label('','tag'); tokTag.obj.position.set(0,.5,0); token.add(tokTag.obj);
+scene.add(token);
+const tok = {pos:new THREE.Vector3(), tgt:new THREE.Vector3()};
+// 每個 unit 的頂端高度，給標記定位
+const _b = new THREE.Box3();
+mainUnits.forEach(u=>{ _b.setFromObject(u.root); u.topY = _b.max.y; u.frontZ = _b.max.z; });
+// 標籤放在頂端的元件，標記改放到正面，避免壓住標籤
+const TOK_FRONT = new Set(['vcM','vcW','ops','auto','sup']);
+
+/* ───────────── 狀態 ───────────── */
+let cur = -1, hoverC = '', auto = false, autoAcc = 0, zoom = 1;
+const flow = {step:0, playing:true, acc:0};
+const quiz = {i:0, answered:false, pick:'', right:0, done:0};
+const VCF_ONLY = new Set(['nsx','sddc','auto']);
+const LIFT = {vsan:0,esx:.2,nsx:.45,vc:.75,sddc:.75,vcfms:.75,sup:.75,ops:1.1,auto:1.1,inst:0};
+
+function modeOf(ch){ return ch.kind==='flow'?'flow':ch.kind==='compare'?'cmp':'stack'; }
+function builtAt(s){ const b = new Set(); for(let k=0;k<=s;k++) FLOW[k].on.forEach(x=>b.add(x)); return b; }
+
+function computeTargets(){
+  const ch = CH[cur]; const mode = modeOf(ch);
+  document.body.dataset.mode = mode;
+  requestRender();
+  worldS.st = mode==='cmp' ? .6 : 1;
+  worldS.xt = mode==='cmp' ? -2.2 : 0;
+  const st = FLOW[flow.step], built = builtAt(flow.step);
+  const qa = ch.kind==='quiz' && quiz.answered ? QUIZ[quiz.i].a : '';
+  for(const u of mainUnits){
+    const c = u.comp;
+    let vis = 1, dim = 1; const off = new THREE.Vector3();
+    if(ch.kind==='cover') off.y = LIFT[c];
+    if(ch.kind==='comp'){ dim = c===ch.c?1:.14; if(c===ch.c) off.z = .5; }
+    if(qa){ dim = c===qa?1:(c===quiz.pick?.5:.14); if(c===qa) off.z = .5; }
+    if(mode==='flow'){ vis = built.has(u.key)?1:0; dim = st.on.includes(u.key)?1:.28; }
+    if(mode==='cmp') dim = VCF_ONLY.has(c)?1:.3;
+    const hov = hoverC===c && mode!=='flow';
+    if(hov && ch.kind!=='comp' && !qa) off.z += .35;
+    // hover 回饋：帶一點該元件顏色的自發光
+    for(const m of u.ems){ m.emissive.set(hov ? C[c].color : 0x000000); m.emissiveIntensity = hov ? .18 : 0; }
+    u.vis.t = vis; u.dim.t = dim; u.off.t.copy(off);
+    // 元件章只留該元件的標籤；手機版畫面小，其他章也只留標示中的元件
+    const hl = mode==='cmp' ? !VCF_ONLY.has(c)
+      : ch.kind==='comp' ? c!==ch.c
+      : mqMobile.matches && c!==qa && c!==hoverC;
+    if(hl!==!!u.hideLbl){ u.hideLbl = hl; u.dirty = true; }
+  }
+  domTU.vis.t = mode==='stack' && ch.kind!=='comp' && !qa ? 1 : 0;
+  domTU.dim.t = 1;
+  vvfU.forEach(u=>u.vis.t = mode==='cmp'?1:0);
+  cmpTU.vis.t = mode==='cmp'?1:0;
+
+  // 流程標記
+  const tu = U[st.at];
+  if(TOK_FRONT.has(tu.key)) tok.tgt.set(tu.home.x, tu.home.y+.15, tu.frontZ+.45);
+  else tok.tgt.set(tu.home.x, tu.topY+.45, tu.home.z+.2);
+  tokMat.color.set(C[tu.comp].color); tokMat.emissive.set(C[tu.comp].color);
+  if(tokTag.el._t!==st.tag){ tokTag.el._t = st.tag; tokTag.el.querySelector('.in').textContent = st.tag; }
+}
+
+/* 相機 */
+const CAM = {
+  cover:{p:[14.5,12.5,23],t:[.5,1.5,0]},
+  stack:{p:[14,12,23],t:[.5,1.3,0]},
+  flow:{p:[14,12.5,24],t:[.5,1.3,0],mobile:{scale:1.0,shift:-.4}},
+  cmp:{p:[2.5,7.5,21],t:[-.3,1.3,0],mobile:{scale:1.2,shift:.8}},
+};
+function camFor(ch){
+  if(ch.kind==='cover') return CAM.cover;
+  if(ch.kind==='comp'){
+    // 目標往元件偏一半，其他元件仍留在畫面內
+    const us = mainUnits.filter(u=>u.comp===ch.c);
+    const c = us.reduce((a,u)=>a.add(u.home),new THREE.Vector3()).divideScalar(us.length);
+    const t = [c.x*.3+.5, Math.max(1.0,c.y*.5+.6), c.z*.5];
+    return {p:[t[0]+11,t[1]+8.8,t[2]+18],t};
+  }
+  if(ch.kind==='flow') return CAM.flow;
+  if(ch.kind==='compare') return CAM.cmp;
+  return CAM.stack;
+}
+const zf = z => Math.pow(z,.75);
+let fly = null;
+function flyTo(c, instant){
+  const p = new THREE.Vector3(...c.p), t = new THREE.Vector3(...c.t);
+  // 手機版沒有左側面板，場景又寬，所以拉遠相機、只稍微平移
+  if(mqMobile.matches){
+    const m = c.mobile || {scale:1.0, shift:.3};
+    p.sub(t).multiplyScalar(m.scale).add(t);
+    p.x += m.shift; t.x += m.shift;
+  }
+  // 縮放橫軸：模型越大相機越近（取 0.75 次方，放到最大時寬場景的右側標籤才不會出界）
+  p.sub(t).divideScalar(zf(zoom)).add(t);
+  if(instant||reduced){ camera.position.copy(p); controls.target.copy(t); fly=null; return; }
+  fly = {p0:camera.position.clone(), t0:controls.target.clone(), p1:p, t1:t, k:0};
+}
+controls.addEventListener('start',()=>{ fly = null; });
+const ease = x => x<.5 ? 4*x*x*x : 1-Math.pow(-2*x+2,3)/2;
+
+/* ───────────── 章節切換 ───────────── */
+const curT = document.getElementById('curT');
+let progY = -1;
+function go(i, instant){
+  i = Math.max(0,Math.min(CH.length-1,i));
+  panel.scrollTop = sections[i].offsetTop;
+  progY = panel.scrollTop;
+  activate(i, instant);
+  setAnchor();
+}
+function activate(i, instant){
+  if(i===cur) return;
+  cur = i;
+  sections.forEach((s,j)=>s.classList.toggle('on',j===i));
+  tickBtns.forEach((b,j)=>b.classList.toggle('on',j===i));
+  tickBtns[i].scrollIntoView({block:'nearest',inline:'center'});
+  curT.textContent = `${pad(i)}　${CH[i].t}`;
+  history.replaceState(null,'','#'+i);
+  const ch = CH[i];
+  if(ch.kind==='flow'){ flow.step=0; flow.playing=!reduced; flow.acc=0; renderFlow(); tok.pos.copy(tok.tgt); }
+  controls.autoRotate = ch.kind==='cover' && !reduced;
+  hoverC = '';
+  flyTo(camFor(ch), instant);
+  computeTargets();
+  if(ch.kind==='flow') tok.pos.copy(tok.tgt);
+  autoAcc = 0;
+}
+ticks.addEventListener('click',e=>{ const b=e.target.closest('[data-go]'); if(b) go(+b.dataset.go); });
+document.getElementById('bPrev').onclick = ()=>go(cur-1);
+document.getElementById('bNext').onclick = ()=>go(cur+1);
+document.getElementById('bReset').onclick = ()=>flyTo(camFor(CH[cur]));
+
+// 點到還沒捲到判斷線的章節（例如頁尾的測驗），先切到那一章，按鈕才有作用
+panel.addEventListener('pointerdown',e=>{
+  const s = e.target.closest('.pg');
+  if(s && +s.dataset.i!==cur){ activate(+s.dataset.i); setAnchor(); }
+});
+// 總覽列：滑過連動模型、點選跳章
+panel.addEventListener('click',e=>{
+  const r = e.target.closest('.row'); if(r) go(chOfComp(r.dataset.comp));
+});
+panel.addEventListener('pointerover',e=>{
+  const r = e.target.closest('.row');
+  const c = r ? r.dataset.comp : '';
+  if(c!==hoverC && CH[cur].kind==='overview'){ hoverC = c; computeTargets(); }
+});
+
+/* 流程控制 */
+const $ = id => document.getElementById(id);
+function renderFlow(){
+  const st = FLOW[flow.step];
+  $('fPh').textContent = st.ph;
+  $('fSn').textContent = `步驟 ${flow.step+1} / ${FLOW.length}`;
+  $('fT').textContent = st.t;
+  $('fNote').innerHTML = st.note;
+  const comps = [...new Set(st.on.map(k=>U[k].comp))];
+  $('fWho').innerHTML = comps.map(c=>`<span class="dot" style="--c:${C[c].color}">${C[c].tag}</span>`).join('');
+  $('fScrub').value = flow.step;
+  $('fPlay').textContent = flow.playing?'Ⅱ 暫停':'▶ 播放';
+  if(CH[cur]?.kind==='flow') computeTargets();
+}
+function flowGo(s){ flow.step = Math.max(0,Math.min(FLOW.length-1,s)); flow.acc = 0; renderFlow(); }
+$('fBack').onclick = ()=>{ flow.playing=false; flowGo(flow.step-1); };
+$('fFwd').onclick = ()=>{ flow.playing=false; flowGo(flow.step+1); };
+$('fPlay').onclick = ()=>{ if(flow.step===FLOW.length-1) flow.step=0; flow.playing=!flow.playing; flow.acc=0; renderFlow(); };
+$('fRe').onclick = ()=>{ flow.playing=true; flowGo(0); };
+$('fScrub').oninput = e=>{ flow.playing=false; flowGo(+e.target.value); };
+
+/* 測驗 */
+function renderQuiz(){
+  const q = QUIZ[quiz.i];
+  $('qN').textContent = `情境 ${quiz.i+1} / ${QUIZ.length}`;
+  $('qT').textContent = q.q;
+  $('qB').querySelectorAll('button').forEach(b=>{ b.disabled=false; b.className=''; });
+  $('qF').innerHTML = '';
+  $('qS').textContent = quiz.done ? `答對 ${quiz.right} / ${quiz.done}` : '';
+  $('qNext').style.visibility = 'hidden';
+}
+function answer(id){
+  if(quiz.answered || CH[cur].kind!=='quiz' || !C[id]) return;
+  const q = QUIZ[quiz.i];
+  quiz.answered = true; quiz.pick = id; quiz.done++;
+  const ok = id===q.a; if(ok) quiz.right++;
+  $('qB').querySelectorAll('button').forEach(b=>{
+    const v = b.dataset.ans; b.disabled = true;
+    if(v===q.a) b.className='right'; else if(v===id) b.className='wrong';
+  });
+  const d = C[q.a];
+  $('qF').innerHTML = ok
+    ? `<span class="res ok">答對了｜${d.tag}</span><br>${q.why}`
+    : `<span class="res no">不是 ${C[id].tag}</span>，正確答案是 <b>${d.tag}</b>。<br>${q.why}`;
+  $('qS').textContent = `答對 ${quiz.right} / ${quiz.done}`;
+  $('qNext').style.visibility = 'visible';
+  $('qNext').textContent = quiz.i===QUIZ.length-1 ? '從頭再來 ↻' : '下一題 →';
+  computeTargets();
+}
+$('qB').addEventListener('click',e=>{ const b=e.target.closest('[data-ans]'); if(b) answer(b.dataset.ans); });
+$('qNext').onclick = ()=>{
+  if(quiz.i===QUIZ.length-1){ quiz.i=0; quiz.right=0; quiz.done=0; } else quiz.i++;
+  quiz.answered=false; quiz.pick=''; renderQuiz(); computeTargets();
+};
+
+/* 拾取：滑過與點選模型 */
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+let downAt = null;
+function pickC(e){
+  if(modeOf(CH[cur])==='flow') return '';
+  const r = renderer.domElement.getBoundingClientRect();
+  ndc.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1);
+  ray.setFromCamera(ndc,camera);
+  const hit = ray.intersectObjects(pickables,false).find(h=>h.object.userData.u.vis.c>.5);
+  return hit ? hit.object.userData.comp : '';
+}
+// pointermove 只記下位置，射線檢測在主迴圈裡每幀最多做一次
+let pendingHover = null;
+renderer.domElement.addEventListener('pointermove',e=>{ if(!e.buttons) pendingHover = e; });
+function processHover(){
+  if(!pendingHover) return;
+  const c = pickC(pendingHover); pendingHover = null;
+  renderer.domElement.style.cursor = c?'pointer':'grab';
+  if(c!==hoverC){ hoverC = c;
+    panel.querySelectorAll('.row').forEach(r=>r.classList.toggle('hl',r.dataset.comp===c));
+    computeTargets(); }
+}
+renderer.domElement.addEventListener('pointerleave',()=>{ pendingHover = null; if(hoverC){ hoverC=''; panel.querySelectorAll('.row.hl').forEach(r=>r.classList.remove('hl')); computeTargets(); }});
+renderer.domElement.addEventListener('pointerdown',e=>{ downAt=[e.clientX,e.clientY]; });
+renderer.domElement.addEventListener('pointerup',e=>{
+  if(!downAt || Math.hypot(e.clientX-downAt[0],e.clientY-downAt[1])>5) return;
+  const c = pickC(e); if(!c) return;
+  if(CH[cur].kind==='quiz') answer(c); else go(chOfComp(c));
+});
+
+/* 頂部控制 */
+const bAuto = $('bAuto');
+bAuto.onclick = ()=>{ auto=!auto; autoAcc=0; bAuto.setAttribute('aria-pressed',auto); bAuto.textContent = auto?'Ⅱ 自動播放':'▶ 自動播放'; };
+function themeNow(){ return document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'); }
+function applyTheme(){
+  const dark = themeNow()==='dark';
+  const ink = new THREE.Color(dark?'#ECECE8':'#161616');
+  edgeMats.forEach(m=>m.color.copy(ink));
+  const base = new THREE.Color(dark?'#2A2C2F':'#FFFFFF');
+  bodyMats.forEach(b=>b.m.color.copy(b.color).lerp(base, dark? Math.min(.62,b.mix*.85) : b.mix));
+  groundMat.opacity = dark?.38:.16;
+  hemi.groundColor.set(dark?'#3a3b3d':'#c9cac6');
+  requestRender();
+}
+$('bTheme').onclick = ()=>{ document.documentElement.dataset.theme = themeNow()==='dark'?'light':'dark'; applyTheme(); };
+matchMedia('(prefers-color-scheme:dark)').addEventListener('change',applyTheme);
+function toggleFull(){ if(document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen?.(); }
+$('bFull').onclick = toggleFull;
+
+addEventListener('keydown',e=>{
+  if(e.target.closest('input,textarea,select')) return;
+  const k = e.key;
+  if(k==='ArrowRight'||k==='PageDown'||(k===' '&&!e.target.closest('button,a'))){ e.preventDefault(); go(cur+1); }
+  else if(k==='ArrowLeft'||k==='PageUp'){ e.preventDefault(); go(cur-1); }
+  else if(k==='f'||k==='F') toggleFull();
+  else if(k==='Home') go(0);
+  else if(k==='End') go(CH.length-1);
+  else if(CH[cur].kind==='quiz' && /^[0-9]$/.test(k)){ const c = COMPS.find(x=>keyOf(C[x.id])===k); if(c) answer(c.id); }
+});
+
+/* 尺寸 */
+function sizeStage(){
+  const r = stage.getBoundingClientRect();
+  const w = Math.max(1,r.width), h = Math.max(1,r.height);
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(w,h); labelR.setSize(w,h);
+  camera.aspect = w/h;
+  if(!mqMobile.matches){
+    const pr = panel.getBoundingClientRect().right;
+    camera.setViewOffset(w,h,-pr/2,0,w,h);
+    // 模型置中在面板右側的空間；1000 約是 1440 寬、內容區 440px 時的可用寬度，再留一點標籤邊距
+    camera.zoom = Math.min(1,(w-pr)/1000);
+  } else { camera.clearViewOffset(); camera.zoom = 1; }
+  camera.updateProjectionMatrix();
+  requestRender();
+}
+// 版面變動後，依捲動比例把面板還原到同一處
+// 捲動判斷章節：面板 0.45 倍高度那條線落在哪一章
+const LINE = .45;
+let anchor = {i:0,f:0};
+function setAnchor(){ const s = sections[cur]; anchor = {i:cur, f:(panel.scrollTop-s.offsetTop)/s.offsetHeight}; }
+panel.addEventListener('scroll',()=>{
+  if(Math.abs(panel.scrollTop-progY)<2) return;   // go() 自己捲的，章節已設定
+  progY = -1;
+  const y = panel.scrollTop + LINE*panel.clientHeight;
+  let i = 0; while(i<sections.length-1 && sections[i+1].offsetTop<=y) i++;
+  activate(i);
+  setAnchor();
+},{passive:true});
+// 版面變寬變窄後，依 anchor 捲回同一章同一處，並讓判斷線仍落在同一章
+function keepScroll(fn){
+  const a = anchor;
+  fn();
+  const s = sections[a.i], L = LINE*panel.clientHeight;
+  const y = s.offsetTop + a.f*s.offsetHeight;
+  panel.scrollTop = Math.min(Math.max(y, s.offsetTop-L), s.offsetTop+s.offsetHeight-L-1);
+  progY = panel.scrollTop; anchor = a;
+}
+addEventListener('resize',()=>keepScroll(sizeStage));
+addEventListener('hashchange',()=>{ const n = parseInt(location.hash.slice(1)); if(Number.isFinite(n)) go(n); });
+mqMobile.addEventListener('change',()=>{ sizeStage(); flyTo(camFor(CH[cur]),true); computeTargets(); });
+// 拖曳結束就移開焦點，← → 才會回到換章；鍵盤操作橫軸不受影響
+$('zoom').addEventListener('pointerup',e=>e.target.blur());
+$('zoom').addEventListener('input',e=>{
+  const z = +e.target.value, old = zoom; zoom = z;
+  keepScroll(()=>{ document.documentElement.style.setProperty('--z',z); sizeStage(); });
+  // 最後依新的縮放倍率調整相機距離（飛行中也一併調整終點）
+  const r = zf(old)/zf(z);
+  camera.position.sub(controls.target).multiplyScalar(r).add(controls.target);
+  if(fly) fly.p1.sub(fly.t1).multiplyScalar(r).add(fly.t1);
+  controls.update(); requestRender();
+});
+
+/* ───────────── 主迴圈 ───────────── */
+// 按需重繪：畫面靜止時跳過 WebGL 與標籤的繪製，狀態邏輯（自動播放、流程步進）照常每幀執行
+let wake = 2;
+function requestRender(){ wake = Math.max(wake,2); }
+controls.addEventListener('change',requestRender);
+const EPS = 1e-3;
+function setLabel(el, o, vis){
+  if(el._o!==o){ el._o = o; el.style.opacity = o; }
+  if(el._v!==vis){ el._v = vis; el.style.visibility = vis; }
+}
+const clock = new THREE.Clock();
+const progress = $('progress');
+function tick(){
+  const dt = Math.min(clock.getDelta(),.25), t = clock.elapsedTime;
+  const k = reduced ? 1 : 1-Math.exp(-dt*6);
+
+  if(fly){
+    fly.k = Math.min(1, fly.k + dt/1.3);
+    const e = ease(fly.k);
+    camera.position.lerpVectors(fly.p0,fly.p1,e);
+    controls.target.lerpVectors(fly.t0,fly.t1,e);
+    if(fly.k>=1) fly = null;
+  }
+  processHover();
+  let active = !!fly;
+  if(controls.update()) active = true;
+  if(controls.autoRotate) active = true;
+
+  // world 縮放與平移（對照章）
+  if(Math.abs(worldS.s-worldS.st)>EPS || Math.abs(worldS.x-worldS.xt)>EPS){
+    worldS.s += (worldS.st-worldS.s)*k; worldS.x += (worldS.xt-worldS.x)*k;
+    if(Math.abs(worldS.s-worldS.st)<=EPS && Math.abs(worldS.x-worldS.xt)<=EPS){ worldS.s = worldS.st; worldS.x = worldS.xt; }
+    world.scale.setScalar(worldS.s); world.position.x = worldS.x;
+    active = true;
+  }
+
+  for(const u of units){
+    const moving = Math.abs(u.vis.t-u.vis.c)>EPS || Math.abs(u.dim.t-u.dim.c)>EPS || u.off.c.distanceToSquared(u.off.t)>EPS*EPS;
+    if(!moving && !u.dirty) continue;
+    if(moving){
+      u.vis.c += (u.vis.t-u.vis.c)*k;
+      u.dim.c += (u.dim.t-u.dim.c)*k;
+      u.off.c.lerp(u.off.t,k);
+      active = true; u.dirty = true;
+    } else { u.vis.c = u.vis.t; u.dim.c = u.dim.t; u.off.c.copy(u.off.t); u.dirty = false; }
+    u.root.position.copy(u.home).add(u.off.c);
+    const a = u.vis.c*u.dim.c;
+    u.root.visible = u.vis.c>.01;
+    for(const p of u.parts){
+      p.m.opacity = p.base*a; p.m.depthWrite = a>.6;
+      // 完全不透明時改走不透明渲染流程，深度排序才正確
+      const tr = p.base*a < .999;
+      if(tr!==p.tr){ p.tr = tr; p.m.transparent = tr; p.m.needsUpdate = true; }
+    }
+    // 變淡的 unit 不投影，否則地面陰影會透過半透明物件形成一大塊灰
+    const cast = a>.6;
+    if(cast!==u.cast){ u.cast = cast; for(const m of u.casters) m.castShadow = cast; }
+    for(const el of u.labels) setLabel(el, +(u.vis.c*(.3+.7*u.dim.c)).toFixed(3), u.vis.c<.03||u.hideLbl?'hidden':'visible');
+  }
+
+  // 流程標記
+  const flowOn = CH[cur]?.kind==='flow';
+  token.visible = flowOn;
+  setLabel(tokTag.el, 1, flowOn?'visible':'hidden');
+  if(flowOn){
+    active = true;
+    tok.pos.lerp(tok.tgt, reduced?1:1-Math.exp(-dt*4));
+    token.position.copy(tok.pos);
+    token.position.y += Math.sin(t*2.2)*.05;
+    tokMesh.rotation.y = t*1.2;
+  }
+
+  // 流程自動前進
+  if(flowOn && flow.playing){
+    flow.acc += dt;
+    if(flow.acc>2.6){
+      if(flow.step<FLOW.length-1) flowGo(flow.step+1);
+      else { flow.playing=false; renderFlow(); }
+    }
+  }
+
+  // 自動播放章節
+  if(auto){
+    const ch = CH[cur];
+    const busy = ch.kind==='flow' && flow.playing;
+    if(!busy) autoAcc += dt;
+    const need = ch.kind==='flow'?2.5:8;
+    progress.style.width = (busy?0:Math.min(1,autoAcc/need)*100)+'%';
+    if(autoAcc>need){
+      if(cur>=CH.length-2){ go(cur+1); bAuto.click(); progress.style.width='0'; }
+      else go(cur+1);
+    }
+  } else progress.style.width = '0';
+
+  if(active || wake>0){
+    renderer.render(scene,camera);
+    labelR.render(scene,camera);
+    if(wake>0) wake--;
+  }
+  requestAnimationFrame(tick);
+}
+
+/* 啟動 */
+applyTheme();
+sizeStage();
+const start = parseInt(location.hash.slice(1));
+renderQuiz();
+go(Number.isFinite(start)?start:0, true);
+units.forEach(u=>{ u.vis.c=u.vis.t; u.dim.c=u.dim.t; u.off.c.copy(u.off.t); u.dirty=true; });
+world.scale.setScalar(worldS.s = worldS.st); world.position.x = worldS.x = worldS.xt;
+tok.pos.copy(tok.tgt);
+tick();
+</script>
+</body>
+</html>
